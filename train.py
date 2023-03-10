@@ -59,8 +59,8 @@ def run_training_process(run_params):
         val_data = test_data = TadpoleDataset(fold=run_params.fold, train=False,samples_per_epoch=1)
     
     if run_params.dataset == "datos":
-        train_data = torch.tensor(datos[train_indices,:,:], dtype = torch.double)
-        val_data = test_data = torch.tensor(datos[test_indices,:,:], dtype = torch.double)
+        train_data = datos[train_indices,:,:]
+        val_data = test_data = datos[test_indices,:,:]
                                
     if train_data is None:
         raise Exception("Dataset %s not supported" % run_params.dataset)
@@ -82,11 +82,11 @@ def run_training_process(run_params):
     #configure input feature size
     if run_params.pre_fc is None or len(run_params.pre_fc)==0: 
         if len(run_params.dgm_layers[0])>0:
-            run_params.dgm_layers[0][0]=14
-        run_params.conv_layers[0][0]=14
+            run_params.dgm_layers[0][0]=train_data.n_features
+        run_params.conv_layers[0][0]=train_data.n_features
     else:
-        run_params.pre_fc[0]= 14
-    run_params.fc_layers[-1] = 1
+        run_params.pre_fc[0]=train_data.n_features
+    run_params.fc_layers[-1] = train_data.num_classes
     
     model = DGM_Model(run_params)
 
@@ -105,7 +105,8 @@ def run_training_process(run_params):
         mode='min')
     callbacks = [checkpoint_callback,early_stop_callback]
     
-    callbacks = None
+    if val_data==test_data:
+        callbacks = None
         
     logger = TensorBoardLogger("logs/")
     trainer = pl.Trainer.from_argparse_args(run_params,logger=logger,
@@ -124,7 +125,7 @@ if __name__ == "__main__":
                               '--check_val_every_n_epoch','1'])
     parser.add_argument("--num_gpus", default=10, type=int)
     
-    parser.add_argument("--dataset", default='datos')
+    parser.add_argument("--dataset", default='Cora')
     parser.add_argument("--fold", default='0', type=int) #Used for k-fold cross validation in tadpole/ukbb
     
     
